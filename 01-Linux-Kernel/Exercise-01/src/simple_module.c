@@ -1,5 +1,5 @@
 /**
- * main.c - Basic Linux kernel module example
+ * simple_module.c - Basic Linux kernel module example
  *
  * This module demonstrates the essential components of a Linux kernel module
  * with thorough explanations of each part.

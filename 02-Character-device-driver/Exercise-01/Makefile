@@ -1,59 +1,70 @@
-# Makefile for character device driver project
+# Makefile for Simple Linux Kernel Driver Project
+#
+# This single Makefile handles building both:
+# - Kernel module (src/kernel/simple_driver.c)
+# - Test application (src/user/test_app.c)
 
-# Module and application names
+# Source directories and file paths
+SRC_DIR := src
+KERNEL_SRC := $(SRC_DIR)/kernel/simple_driver.c
+USER_SRC := $(SRC_DIR)/user/test_app.c
+
+# Output file names
 MODULE_NAME := simple_driver
-APP_NAME := simple_test
+TEST_APP := test_app
 
-# Kernel source directory (for module compilation)
-KERNEL_DIR ?= /lib/modules/$(shell uname -r)/build
-
-# Compiler settings
+# Compiler and flags for test application
 CC := gcc
-CFLAGS := -Wall -Wextra -O2
+CFLAGS := -Wall -Wextra -g -O2
 
-# Default target: build both module and test application
-all: module app
+# Kernel source directory
+KERNEL_SOURCE := /lib/modules/$(shell uname -r)/build
+PWD := $(shell pwd)
+KERNEL_BUILD_DIR := $(SRC_DIR)/kernel
 
-# Build the kernel module
-module:
-	@echo "Building kernel module..."
-	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) modules
+# Default target: build both kernel module and test application
+all: kernel_module user_app
 
-# Build the test application
-app:
-	@echo "Building test application..."
-	$(CC) $(CFLAGS) src/user/test_app.c -o $(APP_NAME)
+# Create kernel Makefile and build the module
+kernel_module: $(KERNEL_SRC)
+	@echo "=== Building kernel module ==="
+	@echo "obj-m := $(MODULE_NAME).o" > $(KERNEL_BUILD_DIR)/Makefile
+	$(MAKE) -C $(KERNEL_SOURCE) M=$(PWD)/$(KERNEL_BUILD_DIR) modules
+
+# Build test application
+user_app: $(USER_SRC)
+	@echo "=== Building test application ==="
+	$(CC) $(CFLAGS) -o $(SRC_DIR)/user/$(TEST_APP) $<
+
+# Install kernel module
+load:
+	@echo "=== Loading kernel module ==="
+	sudo insmod $(KERNEL_BUILD_DIR)/$(MODULE_NAME).ko
+
+# Remove kernel module
+unload:
+	@echo "=== Unloading kernel module ==="
+	sudo rmmod $(MODULE_NAME) || true
 
 # Clean build artifacts
 clean:
-	@echo "Cleaning build artifacts..."
-	$(MAKE) -C $(KERNEL_DIR) M=$(PWD) clean
-	rm -f $(APP_NAME)
+	@echo "=== Cleaning build files ==="
+	@if [ -f $(KERNEL_BUILD_DIR)/Makefile ]; then \
+		$(MAKE) -C $(KERNEL_SOURCE) M=$(PWD)/$(KERNEL_BUILD_DIR) clean; \
+	fi
+	rm -f $(KERNEL_BUILD_DIR)/Makefile
+	rm -f $(SRC_DIR)/user/$(TEST_APP)
 
-# Load the kernel module
-load:
-	@echo "Loading kernel module..."
-	sudo insmod $(MODULE_NAME).ko
+# Display help information
+help:
+	@echo "Available commands:"
+	@echo "  make           - Build both kernel module and test application"
+	@echo "  make kernel_module - Only build kernel module"
+	@echo "  make user_app  - Only build test application"
+	@echo "  make load      - Load kernel module"
+	@echo "  make unload    - Unload kernel module"
+	@echo "  make clean     - Clean build files"
+	@echo "  make help      - Display this help"
 
-# Unload the kernel module
-unload:
-	@echo "Unloading kernel module..."
-	sudo rmmod $(MODULE_NAME)
-
-# Run the test application
-test: app
-	@echo "Running test application..."
-	sudo ./$(APP_NAME)
-
-# View recent kernel log messages
-log:
-	@echo "Showing kernel log messages..."
-	sudo dmesg | tail -20
-
-# Define kernel module object files
-# This tells the kernel build system which source files to compile
-obj-m := $(MODULE_NAME).o
-$(MODULE_NAME)-objs := src/kernel/simple_driver.o
-
-# Declare targets that don't represent files
-.PHONY: all module app clean load unload test log
+# Define targets that don't correspond to file names
+.PHONY: all kernel_module user_app load unload clean help

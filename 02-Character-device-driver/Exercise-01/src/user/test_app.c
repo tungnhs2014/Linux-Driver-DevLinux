@@ -7,9 +7,6 @@
  * - Write data to the device
  * - Read data back from the device
  * - Close the device
- *
- * @author TungNHS
- * @license GPL-2.0
  */
 
 #include <stdio.h>      /* For printf, perror */
@@ -18,6 +15,7 @@
 #include <unistd.h>     /* For close */
 #include <fcntl.h>      /* For open, O_RDWR */
 #include <errno.h>      /* For errno */
+#include <sys/types.h>  /* For off_t */
 
 /* Constants */
 #define DEVICE_PATH     "/dev/simple_dev"   /* Path to the device file */
@@ -66,9 +64,6 @@ static int read_device(int fd)
 {
     char buffer[BUFFER_SIZE];
     ssize_t bytes;
-    
-    /* Go to the beginning of the device */
-    lseek(fd, 0, SEEK_SET);
     
     /* Print what we're about to do */
     printf("Reading from device...\n");
@@ -120,6 +115,14 @@ int main(int argc, char *argv[])
     /* Write to the device */
     if (write_device(fd, message) < 0) {
         close(fd);
+        return EXIT_FAILURE;
+    }
+    
+    /* Reopen the device to reset position */
+    close(fd);
+    fd = open(DEVICE_PATH, O_RDWR);
+    if (fd < 0) {
+        perror("Error reopening device");
         return EXIT_FAILURE;
     }
     
