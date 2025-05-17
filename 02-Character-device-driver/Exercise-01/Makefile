@@ -1,8 +1,4 @@
 # Makefile for Simple Linux Kernel Driver Project
-#
-# This single Makefile handles building both:
-# - Kernel module (src/kernel/simple_driver.c)
-# - Test application (src/user/test_app.c)
 
 # Source directories and file paths
 SRC_DIR := src
